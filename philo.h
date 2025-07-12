@@ -6,7 +6,7 @@
 /*   By: zkharbac <zkharbac@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/06 11:48:23 by zkharbac          #+#    #+#             */
-/*   Updated: 2025/07/11 16:05:26 by zkharbac         ###   ########.fr       */
+/*   Updated: 2025/07/12 16:32:26 by zkharbac         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,20 +35,22 @@ typedef struct s_philo
 
 typedef struct s_data
 {
-	int			nb_philos;
-	int			time_to_die;
-	int			time_to_eat;
-	int			time_to_sleep;
-	int			must_eat;
-	int			has_optional_arg;
-	int			someone_died;
-	long long	start_time;
+	int nb_philos;
+	int time_to_die;
+	int time_to_eat;
+	int time_to_sleep;
+	int must_eat;
+	int has_optional_arg;
+	int someone_died;
+	long long start_time;
 	pthread_mutex_t *forks;
 	pthread_mutex_t print_mutex;
 	pthread_mutex_t death_mutex;
 	pthread_mutex_t start_mutex;
-	t_philo		*philos;
+	struct s_philo *philos;
+	pthread_t monitor_thread;
 } t_data;
+
 
 int		parse_args(int argc, char **argv, t_data *data);
 int		safe_atoi(const char *str, int *result);
@@ -62,6 +64,8 @@ void	drop_forks(t_philo *philo);
 void	one_philo(t_philo *philo);
 int		init_simulation(t_data *data);
 void	cleanup(t_data *data);
+void	*ft_calloc(size_t count, size_t size); // optional if you use calloc
+void	*ft_memset(void *b, int c, size_t len); // optional
 
 #endif
 

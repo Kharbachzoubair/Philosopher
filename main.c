@@ -6,7 +6,7 @@
 /*   By: zkharbac <zkharbac@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/06 12:52:39 by zkharbac          #+#    #+#             */
-/*   Updated: 2025/07/11 16:05:42 by zkharbac         ###   ########.fr       */
+/*   Updated: 2025/07/12 16:42:22 by zkharbac         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,11 +65,6 @@ void ft_usleep(long long time, t_data *data)
 	}
 }
 
-/* ************************************************************************** */
-
-// args.c
-#include "philo.h"
-
 int parse_args(int argc, char **argv, t_data *data)
 {
 	if (argc != 5 && argc != 6)
@@ -93,82 +88,17 @@ int parse_args(int argc, char **argv, t_data *data)
 	return (1);
 }
 
-/* ************************************************************************** */
-
-// main.c
-#include "philo.h"
-
-int main(int argc, char **argv)
+void print_status(t_philo *philo, char *msg)
 {
-	t_data data;
-
-	if (!parse_args(argc, argv, &data))
+	pthread_mutex_lock(&philo->data->death_mutex);
+	if (!philo->data->someone_died)
 	{
-		printf("Error: Invalid arguments.\n");
-		return (1);
+		pthread_mutex_lock(&philo->data->print_mutex);
+		printf("%lld %d %s\n", get_time() - philo->data->start_time, philo->id, msg);
+		pthread_mutex_unlock(&philo->data->print_mutex);
 	}
-	if (init_simulation(&data))
-		return (1);
-	cleanup(&data);
-	return (0);
+	pthread_mutex_unlock(&philo->data->death_mutex);
 }
-
-/* ************************************************************************** */
-
-// init.c
-#include "philo.h"
-
-int init_simulation(t_data *data)
-{
-	int i;
-
-	data->someone_died = 0;
-	data->start_time = get_time();
-	pthread_mutex_init(&data->print_mutex, NULL);
-	pthread_mutex_init(&data->death_mutex, NULL);
-	pthread_mutex_init(&data->start_mutex, NULL);
-
-	data->forks = malloc(sizeof(pthread_mutex_t) * data->nb_philos);
-	data->philos = malloc(sizeof(t_philo) * data->nb_philos);
-	if (!data->forks || !data->philos)
-		return (1);
-	i = -1;
-	while (++i < data->nb_philos)
-		pthread_mutex_init(&data->forks[i], NULL);
-	i = -1;
-	while (++i < data->nb_philos)
-	{
-		data->philos[i].id = i + 1;
-		data->philos[i].meals = 0;
-		data->philos[i].data = data;
-		data->philos[i].left_fork = &data->forks[i];
-		data->philos[i].right_fork = &data->forks[(i + 1) % data->nb_philos];
-		data->philos[i].last_meal = get_time();
-		if (pthread_create(&data->philos[i].thread, NULL, philo_routine, &data->philos[i]))
-			return (1);
-	}
-	return (0);
-}
-
-void cleanup(t_data *data)
-{
-	int i = -1;
-	while (++i < data->nb_philos)
-		pthread_join(data->philos[i].thread, NULL);
-	i = -1;
-	while (++i < data->nb_philos)
-		pthread_mutex_destroy(&data->forks[i]);
-	pthread_mutex_destroy(&data->print_mutex);
-	pthread_mutex_destroy(&data->death_mutex);
-	pthread_mutex_destroy(&data->start_mutex);
-	free(data->forks);
-	free(data->philos);
-}
-
-/* ************************************************************************** */
-
-// routine.c
-#include "philo.h"
 
 void take_forks(t_philo *philo)
 {
@@ -184,18 +114,6 @@ void drop_forks(t_philo *philo)
 	pthread_mutex_unlock(philo->left_fork);
 }
 
-void print_status(t_philo *philo, char *msg)
-{
-	pthread_mutex_lock(&philo->data->death_mutex);
-	if (!philo->data->someone_died)
-	{
-		pthread_mutex_lock(&philo->data->print_mutex);
-		printf("%lld %d %s\n", get_time() - philo->data->start_time, philo->id, msg);
-		pthread_mutex_unlock(&philo->data->print_mutex);
-	}
-	pthread_mutex_unlock(&philo->data->death_mutex);
-}
-
 void *philo_routine(void *arg)
 {
 	t_philo *philo = (t_philo *)arg;
@@ -203,7 +121,7 @@ void *philo_routine(void *arg)
 	if (philo->data->nb_philos == 1)
 		return (one_philo(philo), NULL);
 	if (philo->id % 2 == 0)
-		usleep(100);
+		usleep(1000);
 	while (1)
 	{
 		pthread_mutex_lock(&philo->data->death_mutex);
@@ -236,3 +154,94 @@ void one_philo(t_philo *philo)
 	philo->data->someone_died = 1;
 }
 
+void *monitor_routine(void *arg)
+{
+	t_data *data = (t_data *)arg;
+	int i;
+
+	while (1)
+	{
+		i = -1;
+		while (++i < data->nb_philos)
+		{
+			pthread_mutex_lock(&data->death_mutex);
+			long long time_since_meal = get_time() - data->philos[i].last_meal;
+			if (!data->someone_died && time_since_meal > data->time_to_die)
+			{
+				data->someone_died = 1;
+				pthread_mutex_lock(&data->print_mutex);
+				printf("%lld %d died\n", get_time() - data->start_time, data->philos[i].id);
+				pthread_mutex_unlock(&data->print_mutex);
+				pthread_mutex_unlock(&data->death_mutex);
+				return (NULL);
+			}
+			pthread_mutex_unlock(&data->death_mutex);
+		}
+		usleep(1000);
+	}
+}
+
+int init_simulation(t_data *data)
+{
+	int i;
+
+	data->someone_died = 0;
+	data->start_time = get_time();
+	pthread_mutex_init(&data->print_mutex, NULL);
+	pthread_mutex_init(&data->death_mutex, NULL);
+	pthread_mutex_init(&data->start_mutex, NULL);
+
+	data->forks = malloc(sizeof(pthread_mutex_t) * data->nb_philos);
+	data->philos = malloc(sizeof(t_philo) * data->nb_philos);
+	if (!data->forks || !data->philos)
+		return (1);
+	i = -1;
+	while (++i < data->nb_philos)
+		pthread_mutex_init(&data->forks[i], NULL);
+	i = -1;
+	while (++i < data->nb_philos)
+	{
+		data->philos[i].id = i + 1;
+		data->philos[i].meals = 0;
+		data->philos[i].data = data;
+		data->philos[i].left_fork = &data->forks[i];
+		data->philos[i].right_fork = &data->forks[(i + 1) % data->nb_philos];
+		data->philos[i].last_meal = get_time();
+		if (pthread_create(&data->philos[i].thread, NULL, philo_routine, &data->philos[i]))
+			return (1);
+	}
+	if (pthread_create(&data->monitor_thread, NULL, monitor_routine, data))
+		return (1);
+	return (0);
+}
+
+void cleanup(t_data *data)
+{
+	int i = -1;
+	while (++i < data->nb_philos)
+		pthread_join(data->philos[i].thread, NULL);
+	pthread_join(data->monitor_thread, NULL);
+	i = -1;
+	while (++i < data->nb_philos)
+		pthread_mutex_destroy(&data->forks[i]);
+	pthread_mutex_destroy(&data->print_mutex);
+	pthread_mutex_destroy(&data->death_mutex);
+	pthread_mutex_destroy(&data->start_mutex);
+	free(data->forks);
+	free(data->philos);
+}
+
+int main(int argc, char **argv)
+{
+	t_data data;
+
+	if (!parse_args(argc, argv, &data))
+	{
+		printf("Error: Invalid arguments.\n");
+		return (1);
+	}
+	if (init_simulation(&data))
+		return (1);
+	cleanup(&data);
+	return (0);
+}
