@@ -6,7 +6,7 @@
 /*   By: zkharbac <zkharbac@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/06 11:48:23 by zkharbac          #+#    #+#             */
-/*   Updated: 2025/07/12 16:32:26 by zkharbac         ###   ########.fr       */
+/*   Updated: 2025/07/12 19:43:04 by zkharbac         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,8 @@
 
 # include <stdio.h>
 # include <stdlib.h>
+# include <stdlib.h>
+# include <string.h>
 # include <limits.h>
 # include <unistd.h>
 # include <pthread.h>

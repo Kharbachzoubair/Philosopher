@@ -6,29 +6,32 @@
 /*   By: zkharbac <zkharbac@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/06 12:52:39 by zkharbac          #+#    #+#             */
-/*   Updated: 2025/07/12 16:42:22 by zkharbac         ###   ########.fr       */
+/*   Updated: 2025/07/12 19:40:54 by zkharbac         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philo.h"
 
-int is_digit_str(const char *str)
+int	is_digit_str(const char *str)
 {
-	int i = 0;
+	int	i = 0;
+
 	if (!str || !str[0])
 		return (0);
 	while (str[i])
+	{
 		if (str[i] < '0' || str[i] > '9')
 			return (0);
-		else
-			i++;
+		i++;
+	}
 	return (1);
 }
 
-int safe_atoi(const char *str, int *result)
+int	safe_atoi(const char *str, int *result)
 {
-	long num = 0;
-	int i = 0;
+	long	num = 0;
+	int		i = 0;
+
 	if (!is_digit_str(str))
 		return (0);
 	while (str[i])
@@ -42,16 +45,18 @@ int safe_atoi(const char *str, int *result)
 	return (1);
 }
 
-long long get_time(void)
+long long	get_time(void)
 {
-	struct timeval tv;
+	struct timeval	tv;
+
 	gettimeofday(&tv, NULL);
 	return ((tv.tv_sec * 1000) + (tv.tv_usec / 1000));
 }
 
-void ft_usleep(long long time, t_data *data)
+void	ft_usleep(long long time, t_data *data)
 {
-	long long start = get_time();
+	long long	start = get_time();
+
 	while (get_time() - start < time)
 	{
 		pthread_mutex_lock(&data->death_mutex);
@@ -65,7 +70,7 @@ void ft_usleep(long long time, t_data *data)
 	}
 }
 
-int parse_args(int argc, char **argv, t_data *data)
+int	parse_args(int argc, char **argv, t_data *data)
 {
 	if (argc != 5 && argc != 6)
 		return (0);
@@ -88,19 +93,20 @@ int parse_args(int argc, char **argv, t_data *data)
 	return (1);
 }
 
-void print_status(t_philo *philo, char *msg)
+void	print_status(t_philo *philo, char *msg)
 {
 	pthread_mutex_lock(&philo->data->death_mutex);
-	if (!philo->data->someone_died)
+	if (!philo->data->someone_died || strcmp(msg, "died") == 0)
 	{
 		pthread_mutex_lock(&philo->data->print_mutex);
-		printf("%lld %d %s\n", get_time() - philo->data->start_time, philo->id, msg);
+		printf("%lld %d %s\n", get_time() - philo->data->start_time,
+			philo->id, msg);
 		pthread_mutex_unlock(&philo->data->print_mutex);
 	}
 	pthread_mutex_unlock(&philo->data->death_mutex);
 }
 
-void take_forks(t_philo *philo)
+void	take_forks(t_philo *philo)
 {
 	pthread_mutex_lock(philo->left_fork);
 	print_status(philo, "has taken a fork");
@@ -108,15 +114,28 @@ void take_forks(t_philo *philo)
 	print_status(philo, "has taken a fork");
 }
 
-void drop_forks(t_philo *philo)
+void	drop_forks(t_philo *philo)
 {
 	pthread_mutex_unlock(philo->right_fork);
 	pthread_mutex_unlock(philo->left_fork);
 }
 
-void *philo_routine(void *arg)
+void	one_philo(t_philo *philo)
 {
-	t_philo *philo = (t_philo *)arg;
+	print_status(philo, "has taken a fork");
+	ft_usleep(philo->data->time_to_die, philo->data);
+	pthread_mutex_lock(&philo->data->death_mutex);
+	if (!philo->data->someone_died)
+	{
+		print_status(philo, "died");
+		philo->data->someone_died = 1;
+	}
+	pthread_mutex_unlock(&philo->data->death_mutex);
+}
+
+void	*philo_routine(void *arg)
+{
+	t_philo	*philo = (t_philo *)arg;
 
 	if (philo->data->nb_philos == 1)
 		return (one_philo(philo), NULL);
@@ -146,22 +165,16 @@ void *philo_routine(void *arg)
 	return (NULL);
 }
 
-void one_philo(t_philo *philo)
+void	*monitor_routine(void *arg)
 {
-	print_status(philo, "has taken a fork");
-	ft_usleep(philo->data->time_to_die, philo->data);
-	print_status(philo, "died");
-	philo->data->someone_died = 1;
-}
-
-void *monitor_routine(void *arg)
-{
-	t_data *data = (t_data *)arg;
-	int i;
+	t_data	*data = (t_data *)arg;
+	int		i;
+	int		full_philos;
 
 	while (1)
 	{
 		i = -1;
+		full_philos = 0;
 		while (++i < data->nb_philos)
 		{
 			pthread_mutex_lock(&data->death_mutex);
@@ -170,27 +183,36 @@ void *monitor_routine(void *arg)
 			{
 				data->someone_died = 1;
 				pthread_mutex_lock(&data->print_mutex);
-				printf("%lld %d died\n", get_time() - data->start_time, data->philos[i].id);
+				printf("%lld %d died\n", get_time() - data->start_time,
+					data->philos[i].id);
 				pthread_mutex_unlock(&data->print_mutex);
 				pthread_mutex_unlock(&data->death_mutex);
 				return (NULL);
 			}
+			if (data->has_optional_arg && data->philos[i].meals >= data->must_eat)
+				full_philos++;
 			pthread_mutex_unlock(&data->death_mutex);
+		}
+		if (data->has_optional_arg && full_philos == data->nb_philos)
+		{
+			pthread_mutex_lock(&data->death_mutex);
+			data->someone_died = 1;
+			pthread_mutex_unlock(&data->death_mutex);
+			return (NULL);
 		}
 		usleep(1000);
 	}
 }
 
-int init_simulation(t_data *data)
+int	init_simulation(t_data *data)
 {
-	int i;
+	int	i;
 
 	data->someone_died = 0;
 	data->start_time = get_time();
 	pthread_mutex_init(&data->print_mutex, NULL);
 	pthread_mutex_init(&data->death_mutex, NULL);
 	pthread_mutex_init(&data->start_mutex, NULL);
-
 	data->forks = malloc(sizeof(pthread_mutex_t) * data->nb_philos);
 	data->philos = malloc(sizeof(t_philo) * data->nb_philos);
 	if (!data->forks || !data->philos)
@@ -207,7 +229,8 @@ int init_simulation(t_data *data)
 		data->philos[i].left_fork = &data->forks[i];
 		data->philos[i].right_fork = &data->forks[(i + 1) % data->nb_philos];
 		data->philos[i].last_meal = get_time();
-		if (pthread_create(&data->philos[i].thread, NULL, philo_routine, &data->philos[i]))
+		if (pthread_create(&data->philos[i].thread, NULL,
+				philo_routine, &data->philos[i]))
 			return (1);
 	}
 	if (pthread_create(&data->monitor_thread, NULL, monitor_routine, data))
@@ -215,9 +238,10 @@ int init_simulation(t_data *data)
 	return (0);
 }
 
-void cleanup(t_data *data)
+void	cleanup(t_data *data)
 {
-	int i = -1;
+	int	i = -1;
+
 	while (++i < data->nb_philos)
 		pthread_join(data->philos[i].thread, NULL);
 	pthread_join(data->monitor_thread, NULL);
@@ -231,9 +255,9 @@ void cleanup(t_data *data)
 	free(data->philos);
 }
 
-int main(int argc, char **argv)
+int	main(int argc, char **argv)
 {
-	t_data data;
+	t_data	data;
 
 	if (!parse_args(argc, argv, &data))
 	{
