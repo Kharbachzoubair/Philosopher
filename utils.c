@@ -6,7 +6,7 @@
 /*   By: zkharbac <zkharbac@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/19 08:56:27 by zkharbac          #+#    #+#             */
-/*   Updated: 2025/07/19 10:20:03 by zkharbac         ###   ########.fr       */
+/*   Updated: 2025/07/20 18:16:50 by zkharbac         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,17 +38,18 @@ void	ft_usleep(long long time, t_data *data)
 	}
 }
 
-void	print_status(t_philo *philo, char *msg)
+void	print_status(t_philo *philo, char *message)
 {
-	pthread_mutex_lock(&philo->data->death_mutex);
-	if (!philo->data->someone_died || strcmp(msg, "died") == 0)
+	long long	timestamp;
+
+	pthread_mutex_lock(&philo->data->print_mutex);
+	timestamp = get_time() - philo->data->start_time;
+	if (!philo->data->someone_died || strcmp(message, "died") == 0)
 	{
-		pthread_mutex_lock(&philo->data->print_mutex);
-		printf("%lld %d %s\n", get_time() - philo->data->start_time,
-			philo->id, msg);
-		pthread_mutex_unlock(&philo->data->print_mutex);
+		printf("%lld %d %s\n", timestamp, philo->id, message);
+		fflush(stdout);
 	}
-	pthread_mutex_unlock(&philo->data->death_mutex);
+	pthread_mutex_unlock(&philo->data->print_mutex);
 }
 
 void	take_forks(t_philo *philo)

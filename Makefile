@@ -1,6 +1,6 @@
 # Compiler and Flags
 CC     = cc
-CFLAGS = -Wall -Wextra -Werror -g
+CFLAGS = -Wall -Wextra -Werror 
 
 # Project name
 NAME   = philo

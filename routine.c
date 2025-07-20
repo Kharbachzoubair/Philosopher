@@ -6,7 +6,7 @@
 /*   By: zkharbac <zkharbac@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/18 19:20:17 by zkharbac          #+#    #+#             */
-/*   Updated: 2025/07/19 09:47:49 by zkharbac         ###   ########.fr       */
+/*   Updated: 2025/07/20 17:29:58 by zkharbac         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,10 +65,7 @@ void	one_philo(t_philo *philo)
 	print_status(philo, "has taken a fork");
 	ft_usleep(philo->data->time_to_die, philo->data);
 	pthread_mutex_lock(&philo->data->death_mutex);
-	if (!philo->data->someone_died)
-	{
-		print_status(philo, "died");
-		philo->data->someone_died = 1;
-	}
+	print_status(philo, "died");
 	pthread_mutex_unlock(&philo->data->death_mutex);
+	exit(0);
 }

@@ -6,12 +6,11 @@
 /*   By: zkharbac <zkharbac@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/19 10:16:26 by zkharbac          #+#    #+#             */
-/*   Updated: 2025/07/19 10:27:30 by zkharbac         ###   ########.fr       */
+/*   Updated: 2025/07/20 12:08:16 by zkharbac         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philo.h"
-
 
 static int	check_death(t_data *data, int i, int *full_philos)
 {
@@ -56,14 +55,16 @@ void	*monitor_routine(void *arg)
 			pthread_mutex_unlock(&data->death_mutex);
 			return (NULL);
 		}
-		usleep(1000);
+		usleep(500);
 	}
 	return (NULL);
 }
+
 void	cleanup(t_data *data)
 {
-	int	i = -1;
+	int	i;
 
+	i = -1;
 	while (++i < data->nb_philos)
 		pthread_join(data->philos[i].thread, NULL);
 	pthread_join(data->monitor_thread, NULL);

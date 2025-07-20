@@ -6,7 +6,7 @@
 /*   By: zkharbac <zkharbac@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/06 11:48:23 by zkharbac          #+#    #+#             */
-/*   Updated: 2025/07/19 10:18:02 by zkharbac         ###   ########.fr       */
+/*   Updated: 2025/07/20 18:20:55 by zkharbac         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,7 @@
 # include <pthread.h>
 # include <sys/time.h>
 
-typedef	struct	s_data t_data;
+typedef struct s_data	t_data;
 
 typedef struct s_philo
 {
@@ -33,7 +33,7 @@ typedef struct s_philo
 	pthread_mutex_t	*left_fork;
 	pthread_mutex_t	*right_fork;
 	t_data			*data;
-} t_philo;
+}	t_philo;
 
 typedef struct s_data
 {
@@ -51,7 +51,7 @@ typedef struct s_data
 	pthread_mutex_t	start_mutex;
 	struct s_philo	*philos;
 	pthread_t		monitor_thread;
-} t_data;
+}	t_data;
 
 int			parse_args(int argc, char **argv, t_data *data);
 int			safe_atoi(const char *str, int *result);
